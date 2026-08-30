@@ -25,7 +25,7 @@ const clients = new Set();
 const sessions = new Map();
 const rolePermissions = {
   SUPER_ADMIN: ['*'],
-  TOURNAMENT_ADMIN: ['teams:manage', 'fixtures:manage', 'results:manage'],
+  TOURNAMENT_ADMIN: ['teams:manage', 'fixtures:manage', 'results:manage', 'settings:manage'],
   REGISTRATION_ADMIN: ['registration:sync', 'registration:review'],
   FOOTBALL_SCORER: ['football:score'],
   CRICKET_SCORER: ['cricket:score'],
@@ -166,6 +166,12 @@ async function handleApi(req, res, url) {
   if (req.method === 'GET' && url.pathname === '/api/admin/dashboard') {
     const pending = db.registrations.filter((r) => r.registrationStatus === 'PENDING').length;
     return json(res, 200, { stats: { pendingRegistrations: pending, pendingPayments: db.registrations.filter((r) => r.paymentStatus === 'PENDING_VERIFICATION').length, confirmedTeams: db.teams.filter((t) => t.isPublic).length, liveMatches: db.matches.filter((m) => m.status === 'LIVE').length }, recentRegistrations: db.registrations.slice(0, 5).map((r) => ({ id:r.id, sport:r.sport, team:r.teamDetails.name, captain:r.captainDetails.name, amount:r.claimedAmount, paymentStatus:r.paymentStatus, registrationStatus:r.registrationStatus, flags:r.duplicateFlags })) });
+  }
+  if (req.method === 'PATCH' && url.pathname === '/api/admin/tournament') {
+    if (!requirePermission(admin, 'settings:manage', res)) return;
+    const body = await parseBody(req); const allowed = ['name','venue','closingDate','upiId','organizerName','whatsappNumber','footballFormUrl','cricketFormUrl','footballFee','cricketFee'];
+    for (const key of allowed) if (body[key] !== undefined && body[key] !== '') db.tournament[key] = ['footballFee','cricketFee'].includes(key) ? Number(body[key]) : body[key];
+    audit(db, 'UPDATED_TOURNAMENT_SETTINGS', db.tournament.id, 'Public registration and payment settings updated.', admin.name); updateStore(() => db); return json(res, 200, { tournament: publicTournament(db) });
   }
   if (req.method === 'GET' && url.pathname === '/api/admin/registrations') {
     const sport = url.searchParams.get('sport'); const search = String(url.searchParams.get('search') || '').toLowerCase();
