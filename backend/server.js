@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { URL } = require('url');
-const { readStore, updateStore } = require('./data/store');
+const { readStore, updateStore, connectStore } = require('./data/store');
 const { syncRegistrationSheet } = require('./services/googleSheets');
 const { applyFootballEvent, undoFootballEvent } = require('./scoring/football');
 const { applyDelivery, undoDelivery, oversDisplay, currentRunRate, requiredRunRate } = require('./scoring/cricket');
@@ -289,4 +289,7 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, () => console.log(`Nightleague running at http://localhost:${PORT}`));
+connectStore().then((storage) => server.listen(PORT, () => console.log(`Nightleague running at http://localhost:${PORT} · ${storage.message}`))).catch((error) => {
+  console.warn(`Storage initialization failed: ${error.message}`);
+  server.listen(PORT, () => console.log(`Nightleague running at http://localhost:${PORT}`));
+});
