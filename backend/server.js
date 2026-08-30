@@ -7,9 +7,20 @@ const { readStore, updateStore } = require('./data/store');
 const { syncRegistrationSheet } = require('./services/googleSheets');
 const { applyFootballEvent, undoFootballEvent } = require('./scoring/football');
 const { applyDelivery, undoDelivery, oversDisplay, currentRunRate, requiredRunRate } = require('./scoring/cricket');
+const root = path.join(__dirname, '..');
+
+function loadEnv(file) {
+  if (!fs.existsSync(file)) return;
+  for (const line of fs.readFileSync(file, 'utf8').split(/\r?\n/)) {
+    const match = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
+    if (match && !process.env[match[1]]) process.env[match[1]] = match[2].replace(/^['"]|['"]$/g, '').replace(/\\n/g, '\n');
+  }
+}
+
+loadEnv(path.join(root, '.env'));
+loadEnv(path.join(__dirname, '.env'));
 
 const PORT = Number(process.env.PORT || 4010);
-const root = path.join(__dirname, '..');
 const clients = new Set();
 const sessions = new Map();
 const rolePermissions = {
